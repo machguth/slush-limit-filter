@@ -1,13 +1,20 @@
-Sys.setlocale(category = "LC_TIME", locale = "en_US.UTF-8")
+# NOTE: you need to install the ggplot2 plotting library first.
+# install.packages("ggplot2")
+
+Sys.setlocale(category = "LC_TIME", locale = "en_US.UTF-8") # To have month names in English.
 library(ggplot2)
 
+
+# Read the raw data.
 dat_raw <- read.csv("sat_modis_proc_l4/slush-limit_output_table.csv")
 dat_raw$date <- as.POSIXct(dat_raw$date, format = "%Y-%m-%d")
 
+# Setup the loop: which years and stripes are available?
 years   <- sort(unique(dat_raw$year))
 stripes <- sort(unique(dat_raw$stripe), decreasing = TRUE)
 
 
+# Iterate over the years and then (inner loop) over the stripes.
 for (year_id in 1:length(years)) {
   
   year_removed_X <- NULL # For the plot of all stripes in a year.
@@ -19,6 +26,7 @@ for (year_id in 1:length(years)) {
     
     points_cur_ids <- which((dat_raw$year == year_cur) & (dat_raw$stripe == stripe_cur))
     
+    # There is one stripe with no retrievals!
     if (length(points_cur_ids) > 0) {
     
       points_cur <- dat_raw[points_cur_ids,]
@@ -28,7 +36,7 @@ for (year_id in 1:length(years)) {
       # with all other points which are both higher and earlier,
       # as well as all which are both lower and later.
       # We make a (symmetric) square table where a cell is TRUE if the
-      # two points at the corresponding row and column are in conflict.
+      # two retrievals at the corresponding row and column are in conflict.
       npoints_cur <- length(points_cur[,1])
       conflicts_cur <- matrix(data = NA, nrow = npoints_cur, ncol = npoints_cur)
       points_cur$n_conflicts <- NA
@@ -37,7 +45,7 @@ for (year_id in 1:length(years)) {
         points_cur$n_conflicts[point_id] <- length(which(conflicts_cur[,point_id]))
       }
       
-      # Create pruned data frame which we will strip of conflicting points.
+      # Create "pruned" data frame which we will strip of conflicting points.
       points_cur_pruned <- points_cur
       points_removed_X <- NULL
       
@@ -53,11 +61,15 @@ for (year_id in 1:length(years)) {
         # Analysis of the rate of rise of the slush limit.
         points_cur_pruned_diff_sl <- diff(points_cur_pruned$SL)
         points_cur_pruned_diff_date <- as.numeric(diff(points_cur_pruned$date))
-        points_cur_pruned_rate_with_next <- points_cur_pruned_diff_sl / points_cur_pruned_diff_date
+        points_cur_pruned_rate_with_next <- points_cur_pruned_diff_sl / points_cur_pruned_diff_date # Rate = rise amount / duration.
         points_cur_pruned_rate_with_next_abs <- abs(points_cur_pruned_rate_with_next)
-        points_cur_pruned_rate_mean <- (c(points_cur_pruned_rate_with_next_abs[1],points_cur_pruned_rate_with_next_abs) + c(points_cur_pruned_rate_with_next_abs,points_cur_pruned_rate_with_next_abs[length(points_cur_pruned_rate_with_next_abs)]))/2
+        points_cur_pruned_rate_mean <- (c(points_cur_pruned_rate_with_next_abs[1],points_cur_pruned_rate_with_next_abs) + c(points_cur_pruned_rate_with_next_abs,points_cur_pruned_rate_with_next_abs[length(points_cur_pruned_rate_with_next_abs)]))/2 # We compute the mean of the rates w.r.t. the points immediately before and after.
         
-        points_cur_pruned$score <- points_cur_pruned$n_conflicts * (mean(points_cur_pruned_rate_mean) + points_cur_pruned_rate_mean) # We add the mean to decrease the effect of the rate of rise (else a 3-element cluster outlier with zero rate of rise could remain there forever).
+        # Compute the final point score. It corresponds to the number of conflicts
+        # corrected by the rate of rise (we favor slow rise, probably over-simplified).
+        # We also add the *global mean* of the rate of rise to reduce the effect of each
+        # individual rate of rise.
+        points_cur_pruned$score <- points_cur_pruned$n_conflicts * (mean(points_cur_pruned_rate_mean) + points_cur_pruned_rate_mean) 
         
         id_worst <- which.max(points_cur_pruned$score)
         points_removed_X <- append(points_removed_X, points_cur_pruned$X[id_worst]) # To keep track of the removed points.
@@ -71,6 +83,7 @@ for (year_id in 1:length(years)) {
           points_cur_pruned$n_conflicts[point_id] <- length(which(conflicts_cur[,point_id]))
         }
         
+        # Intermediate (debug) plot after each point removal.
         # ggplot(points_cur_pruned) +
         #   geom_point(aes(x = date, y = SL, fill = n_conflicts), shape = 21, stroke = 0, size = 3) +
         #   geom_line(aes(x = date, y = SL), size = 0.1) +
@@ -88,7 +101,7 @@ for (year_id in 1:length(years)) {
       
       year_removed_X <- append(year_removed_X, points_removed_X) # Keep annual track of the removed Xs.
       
-      
+      # Plot the strip.
       ggplot() +
         geom_point(data = points_cur, aes(x = date, y = SL, fill = n_conflicts), shape = 21, stroke = 0, size = 1.7) +
         geom_line(data = points_cur_pruned, aes(x = date, y = SL), size = 0.1) +
@@ -105,17 +118,6 @@ for (year_id in 1:length(years)) {
         theme(axis.text.x.bottom = element_text(angle = 30, hjust = 1),
               plot.title = element_text(hjust = 0.5))
       ggsave(filename = paste("modis_filter2/aSL_", stripe_cur, "_", year_cur, ".png", sep=""), width = 5, height = 3)
-      
-      
-      
-
-      # 
-      # 
-      # ggplot(df_rate) +
-      #   geom_point(aes(x = date, y = rate)) +
-      #   geom_line(aes(x = date, y = rate), size = 0.1) +
-      #   scale_x_datetime() +
-      #   theme_bw()
     
     }
   }
@@ -124,23 +126,4 @@ for (year_id in 1:length(years)) {
   year_removed_ids <- pmatch(year_removed_X, dat_year$X)
   dat_year_pruned <- dat_year[-year_removed_ids,]
   
-  # ggplot() +
-  #   geom_point(data = points_cur, aes(x = date, y = SL, fill = n_conflicts), shape = 21, stroke = 0, size = 2) +
-  #   geom_text(data = points_cur, aes(x = date, y = SL + 50, label = n_conflicts), size = 2) +
-  #   geom_line(data = points_cur_pruned, aes(x = date, y = SL), size = 0.1) +
-  #   geom_point(data = points_removed, aes(x = date, y = SL), shape = 4, size = 1, stroke = 0.5, color = "#FFFFFF") +
-  #   xlab("Date") +
-  #   ylab("Slush limit [m]") +
-  #   ylim(400,2200) +
-  #   scale_fill_gradientn(name = "Initial #\nof conflicts",
-  #                        colors = c("#888888", "#DE26D7", "#2121CF", "#44AAF0", "#86F6C6", "#F9F961", "#D42E3B", "#000000")) +
-  #   scale_x_datetime(date_labels = "%Y-%m-%d", date_breaks = "1 month") +
-  #   theme_bw()
-  # ggsave(filename = paste("modis_filter1/aSL_", stripe_cur, "_", year_cur, ".png", sep=""), width = 5, height = 3)
-  # 
-  
 }
-
-
-
-
