@@ -3,7 +3,7 @@
 # install.packages("openxlsx")
 # install.packages("scales")
 
-Sys.setlocale(category = "LC_TIME", locale = "en_US.UTF-8") # To have month names in English.
+#Sys.setlocale(category = "LC_TIME", locale = "en_US.UTF-8") # To have month names in English.
 library(ggplot2)
 library(openxlsx)
 library(scales)
@@ -11,7 +11,7 @@ library(scales)
 
 # Read the raw data.
 # dat_raw <- read.csv("sat_modis_proc_l4/slush-limit_output_table.csv")
-dat_raw <- openxlsx::read.xlsx("../slush-limit_output_table.xlsx", sheet = "Sheet1", colNames = TRUE, detectDates = TRUE)
+dat_raw <- openxlsx::read.xlsx("D:/MODIS/sat_modis_proc_SW_l4/slush-limit_output_table.xlsx", sheet = "Sheet1", colNames = TRUE, detectDates = TRUE)
 dat_raw$date <- as.POSIXct(dat_raw$date, format = "%Y-%m-%d")
 
 # Setup the loop: which years and stripes are available?
@@ -137,6 +137,7 @@ for (year_id in 1:length(years)) {
       
       point_removed_ids <- pmatch(points_removed_X, points_cur$X)
       points_removed <- points_cur[point_removed_ids,]
+      #cat("IDs of points removed", point_removed_ids, ".\n")
       
       year_removed_X <- append(year_removed_X, points_removed_X) # Keep annual track of the removed Xs.
       
@@ -164,7 +165,7 @@ for (year_id in 1:length(years)) {
               panel.grid.minor = element_line(color = "#000000", size = 0.05 * mult),
               panel.grid.major = element_line(color = "#000000", size = 0.1 * mult),
               legend.key.height = unit(0.3 * mult, "in"))
-      ggsave(filename = paste("../modis_filter3/aSL_", stripe_cur, "_", year_cur, ".png", sep=""), width = 5*mult, height = 3*mult)
+      ggsave(filename = paste("D:/MODIS/sat_modis_proc_SW_l4/modis_filter3/aSL_", stripe_cur, "_", year_cur, ".png", sep=""), width = 5*mult, height = 3*mult)
     
     }
   }
