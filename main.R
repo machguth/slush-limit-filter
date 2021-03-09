@@ -11,8 +11,8 @@ library(scales)
 
 # Read the raw data.
 # dat_raw <- read.csv("sat_modis_proc_l4/slush-limit_output_table.csv")
-dat_raw <- openxlsx::read.xlsx("C:/Users/machg/switchdrive/_current/_slush-limit_output_table_test.xlsx", sheet = "Sheet1", colNames = TRUE, detectDates = TRUE)
-#dat_raw <- openxlsx::read.xlsx("C:/horst/modeling/modelinput/MODIS/sat_modis_proc_l4/_slush-limit_output_table.xlsx", sheet = "Sheet1", colNames = TRUE, detectDates = TRUE)
+#dat_raw <- openxlsx::read.xlsx("C:/Users/machg/switchdrive/_current/_slush-limit_output_table_test.xlsx", sheet = "Sheet1", colNames = TRUE, detectDates = TRUE)
+dat_raw <- openxlsx::read.xlsx("D:/MODIS/sat_modis_proc_SW_l4/_slush-limit_output_table.xlsx", sheet = "Sheet1", colNames = TRUE, detectDates = TRUE)
 dat_raw$date <- as.POSIXct(dat_raw$date, format = "%Y-%m-%d")
 
 # Setup the loop: which years and stripes are available?
@@ -166,7 +166,7 @@ for (year_id in 1:length(years)) {
               panel.grid.minor = element_line(color = "#000000", size = 0.05 * mult),
               panel.grid.major = element_line(color = "#000000", size = 0.1 * mult),
               legend.key.height = unit(0.3 * mult, "in"))
-      ggsave(filename = paste("D:/MODIS/sat_modis_proc_NW_l4/_modis_filter3/aSL_", stripe_cur, "_", year_cur, ".png", sep=""), width = 5*mult, height = 3*mult)
+      ggsave(filename = paste("D:/MODIS/sat_modis_proc_SW_l4/_modis_filter3/aSL_", stripe_cur, "_", year_cur, ".png", sep=""), width = 5*mult, height = 3*mult)
     
     }
   }
